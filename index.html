@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kashef — Web Security Lab</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              900: '#0a0e17',
+              800: '#111827',
+              700: '#1f2937',
+              accent: '#06b6d4',
+              neon: '#10b981',
+              danger: '#ef4444',
+              warning: '#f59e0b',
+              purple: '#8b5cf6'
+            }
+          },
+          fontFamily: {
+            mono: ['Fira Code', 'Courier New', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="bg-[#0b0f19] text-gray-200 min-h-screen flex flex-col font-sans selection:bg-slate-700 selection:text-black">
+
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-gray-800 bg-[#0d1322]/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center text-white font-bold text-xl glow-cyan">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xl font-bold tracking-wider text-white">KASHEF</span>
+          <span class="text-xs bg-slate-900 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono">Nghiên cứu WVPT</span>
+          <span class="text-xs bg-slate-900 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-mono">Demo mô phỏng</span>
+        </div>
+        <p class="text-xs text-gray-400">SQL Injection · Reflected XSS · SSRF</p>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Tabs -->
+    <div class="flex items-center space-x-1.5 bg-gray-900/80 p-1 rounded-lg border border-gray-800 flex-wrap">
+      <button onclick="switchTab('weblab')" id="tab-weblab" class="px-3 py-1.5 rounded-md text-xs font-medium text-white bg-slate-700 transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-bug-slash text-slate-300"></i>
+        <span>Lab mô phỏng</span>
+      </button>
+      <button onclick="switchTab('scanner')" id="tab-scanner" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-radar"></i>
+        <span>Quy trình mô phỏng</span>
+      </button>
+      <button onclick="switchTab('architecture')" id="tab-architecture" class="px-3 py-1.5 rounded-md text-xs font-medium text-gray-400 hover:text-white transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-sitemap"></i>
+        <span>Kiến Trúc 3-Tier</span>
+      </button>
+    </div>
+
+    <div class="flex items-center space-x-2">
+      <a href="Kashef_RBL_Presentation.pptx" download class="text-xs bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-medium px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow transition">
+        <i class="fa-solid fa-file-powerpoint"></i>
+        <span>Tải Slide (.pptx)</span>
+      </a>
+      <a href="AI_Audit_Log_Kashef_RBL.xlsx" download class="text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium px-3 py-1.5 rounded-lg flex items-center space-x-1 shadow transition">
+        <i class="fa-solid fa-file-excel"></i>
+        <span>Tải Audit Log (.xlsx)</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+
+    <!-- ================= TAB 0: INTERACTIVE WEB ATTACK & DEFENSE LAB (SQLi / XSS / SSRF) ================= -->
+    <div id="view-weblab" class="space-y-6">
+
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div><h1 class="text-xl font-bold text-white">Web Security Lab</h1><p class="text-sm text-gray-400 mt-1">Chọn kịch bản → gửi dữ liệu → xem xử lý → bật vá lỗi → thử lại.</p></div>
+        <button onclick="resetLab()" class="px-4 py-2 rounded-lg border border-gray-700 text-sm">Làm lại demo</button>
+      </div>
+
+      <!-- SPLIT SCREEN: LEFT = VULNERABLE WEB APP TARGET | RIGHT = KASHEF EXTENSION ATTACK CONTROLLER -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT PANE (7 cols): SIMULATED TARGET WEB APPLICATION (VULNSHOP / PORTSWIGGER LAB REPLICA) -->
+        <div class="lg:col-span-7 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden shadow-2xl">
+          
+          <!-- Simulated Browser Chrome Bar -->
+          <div class="bg-gray-950 px-4 py-2.5 border-b border-gray-800 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-slate-700 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-slate-700 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-slate-700 inline-block"></span>
+              <span class="ml-2 text-xs font-bold text-white flex items-center">
+                <i class="fa-solid fa-cart-shopping text-slate-300 mr-1.5"></i>
+                Ứng Dụng Web Mục Tiêu: VulnShop (ứng dụng giả lập của nhóm)
+              </span>
+            </div>
+
+            <!-- Live Patch Toggle Switch (Vulnerable vs Patched) -->
+            <div class="flex items-center space-x-2">
+              <span class="text-[11px] text-gray-400">Trạng thái Server:</span>
+              <button onclick="toggleLabPatch()" id="btnTogglePatch" class="px-2.5 py-1 rounded text-xs font-bold bg-slate-900 text-slate-300 border border-slate-700 hover:bg-slate-900 transition flex items-center space-x-1">
+                <i class="fa-solid fa-unlock" id="patchIcon"></i>
+                <span id="patchStatusText">ĐANG CÓ LỖ HỔNG (VULNERABLE)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Simulated Address Bar -->
+          <div class="bg-gray-900/90 px-4 py-2 border-b border-gray-800 flex items-center space-x-2 text-xs font-mono">
+            <span class="text-gray-500"><i class="fa-solid fa-globe"></i> URL Mục Tiêu:</span>
+            <div id="labBrowserUrl" class="flex-1 bg-gray-950 border border-gray-800 rounded px-3 py-1 text-slate-300 truncate">
+              http://vulnshop.portswigger-labs.local/products?category=Accessories
+            </div>
+          </div>
+
+          <!-- 3 Web Vulnerability Vector Sub-Tabs -->
+          <div class="bg-gray-950/60 px-4 pt-3 border-b border-gray-800 flex space-x-2 overflow-x-auto">
+            <button onclick="selectLabVector('sqli')" id="subtab-sqli" class="px-3 py-2 text-xs font-bold rounded-t-lg border-t border-x border-slate-700 bg-gray-900 text-slate-300 flex items-center space-x-1.5">
+              <i class="fa-solid fa-database text-slate-300"></i>
+              <span>1. SQL Injection</span>
+            </button>
+            <button onclick="selectLabVector('xss')" id="subtab-xss" class="px-3 py-2 text-xs font-bold rounded-t-lg border-t border-x border-transparent text-gray-400 hover:text-white flex items-center space-x-1.5">
+              <i class="fa-solid fa-code text-slate-300"></i>
+              <span>2. Reflected XSS</span>
+            </button>
+            <button onclick="selectLabVector('ssrf')" id="subtab-ssrf" class="px-3 py-2 text-xs font-bold rounded-t-lg border-t border-x border-transparent text-gray-400 hover:text-white flex items-center space-x-1.5">
+              <i class="fa-solid fa-server text-slate-300"></i>
+              <span>3. SSRF</span>
+            </button>
+          </div>
+
+          <!-- Lab Interactive Content Area -->
+          <div class="p-5 space-y-4">
+
+            <!-- Input Control for Active Vector -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label id="labInputLabel" class="text-xs font-bold uppercase text-gray-300">
+                  Tham số HTTP GET <code class="text-slate-300">?category=</code> (Truy vấn danh mục sản phẩm):
+                </label>
+                <span id="labVectorBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700 font-mono">
+                  OWASP A03:2021 - SQL Injection (CWE-89)
+                </span>
+              </div>
+
+              <div class="flex space-x-2">
+                <input type="text" id="labPayloadInput" value="Accessories"
+                  class="flex-1 bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-slate-700">
+                <button onclick="executeLabRequest()" class="px-4 py-2 bg-slate-700 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center space-x-1.5">
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Gửi Request</span>
+                </button>
+              </div>
+
+              <!-- Preset Attack Payload Pills -->
+              <div class="flex flex-wrap items-center gap-1.5 pt-1" id="labPresetPills">
+                <!-- Populated dynamically by selectLabVector -->
+              </div>
+            </div>
+
+            <!-- Live Backend Code / Query Inspector -->
+            <div class="bg-gray-950 border border-gray-800 rounded-lg p-3.5 space-y-2">
+              <div class="flex items-center justify-between text-[11px] text-gray-400 border-b border-gray-800 pb-1.5">
+                <span class="font-semibold text-slate-300"><i class="fa-solid fa-terminal mr-1"></i> Mã backend minh họa (không thực thi):</span>
+                <span id="labBackendModeTag" class="font-mono text-slate-300">Nối chuỗi trực tiếp (Unsafe String Concatenation)</span>
+              </div>
+              <pre id="labBackendCode" class="text-xs font-mono text-gray-200 overflow-x-auto whitespace-pre-wrap leading-relaxed"></pre>
+            </div>
+
+            <!-- Simulated Web Page Response / Leaked Data Output -->
+            <div class="bg-gray-950 border border-gray-800 rounded-lg p-4 space-y-2">
+              <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                <span class="text-xs font-bold text-white flex items-center">
+                  <i class="fa-solid fa-window-maximize text-slate-300 mr-1.5"></i>
+                  Phản hồi mô phỏng:
+                </span>
+                <span id="labHttpStatus" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
+                  HTTP/1.1 200 OK
+                </span>
+              </div>
+              <div id="labResponseView" class="text-xs space-y-2 min-h-[140px]">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT PANE (5 cols): KASHEF EXTENSION AUTO-PENTEST PANEL -->
+        <div class="lg:col-span-5 bg-gray-900 border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl flex flex-col">
+          
+          <!-- Extension Header -->
+          <div class="bg-gradient-to-r from-cyan-950 via-slate-900 to-emerald-950 px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white font-bold shadow">
+                <i class="fa-brands fa-chrome"></i>
+              </div>
+              <div>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Bảng điều khiển Kashef mô phỏng</h3>
+                <p class="text-[11px] text-slate-300">Minh họa luồng kiểm thử; không xác nhận lỗ hổng</p>
+              </div>
+            </div>
+            <span class="text-[10px] font-mono bg-slate-900/80 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+              Điều khiển lab
+            </span>
+          </div>
+
+          <div class="p-4 space-y-4 flex-1">
+            <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 text-xs text-gray-300 space-y-2">
+              <div class="font-bold text-white flex items-center justify-between">
+                <span><i class="fa-solid fa-bolt text-slate-300 mr-1.5"></i> Điều Khiển Tấn Công Tự Động (Stage 2 &amp; 3):</span>
+                <span class="text-[10px] text-gray-400 font-mono">Kịch bản minh họa</span>
+              </div>
+              <p class="text-[11px] text-gray-400">
+                Nhấn nút bên dưới để <strong>Kashef Extension</strong> tự động bơm (inject) lần lượt 3 vector tấn công (SQLi, XSS, SSRF) sang ứng dụng <strong>VulnShop</strong> bên trái và ghi nhận bằng chứng khai thác (PoC):
+              </p>
+              <div class="grid grid-cols-1 gap-2 pt-1">
+                <button onclick="runKashefAutoLab()" id="btnAutoLab" class="w-full py-2.5 px-4 rounded-lg font-bold text-xs bg-gradient-to-r from-red-600 via-amber-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-lg flex items-center justify-center space-x-2 transition">
+                  <i class="fa-solid fa-crosshairs"></i>
+                  <span>CHẠY 3 KỊCH BẢN MÔ PHỎNG</span>
+                </button>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5 pt-1">
+                <button onclick="triggerSingleAttack('sqli')" class="py-1.5 px-2 bg-gray-900 hover:bg-slate-900/80 text-slate-300 border border-slate-700/60 rounded text-[11px] font-mono transition">
+                  <i class="fa-solid fa-Syringe mr-1"></i>Chạy SQLi
+                </button>
+                <button onclick="triggerSingleAttack('xss')" class="py-1.5 px-2 bg-gray-900 hover:bg-slate-900/80 text-slate-300 border border-slate-700/60 rounded text-[11px] font-mono transition">
+                  <i class="fa-solid fa-code mr-1"></i>Chạy XSS
+                </button>
+                <button onclick="triggerSingleAttack('ssrf')" class="py-1.5 px-2 bg-gray-900 hover:bg-slate-900/80 text-slate-300 border border-slate-700/60 rounded text-[11px] font-mono transition">
+                  <i class="fa-solid fa-server mr-1"></i>Chạy SSRF
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Extension Attack Log -->
+            <div class="bg-gray-950 border border-gray-800 rounded-lg overflow-hidden">
+              <div class="bg-gray-900 px-3 py-1.5 border-b border-gray-800 flex items-center justify-between text-[11px]">
+                <span class="font-mono text-gray-300"><i class="fa-solid fa-terminal text-slate-300 mr-1"></i> Kashef Exploit Console</span>
+                <button onclick="clearLabConsole()" class="text-gray-500 hover:text-gray-300 text-[10px]">Xóa log</button>
+              </div>
+              <div id="labConsoleLog" class="p-3 font-mono text-[11px] space-y-1.5 h-44 overflow-y-auto custom-scroll">
+                <div class="text-gray-400">[Mô phỏng] Nhãn mục tiêu: http://vulnshop.portswigger-labs.local</div>
+                <div class="text-slate-300">[Ready] Chọn 1 lỗ hổng bên trái hoặc nhấn "CHẠY KASHEF AUTO-ATTACK" để xem cơ chế tấn công web.</div>
+              </div>
+            </div>
+
+            <!-- Captured Loot / Vulnerability Evidence Summary -->
+            <div class="bg-gray-950 border border-gray-800 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white"><i class="fa-solid fa-key text-slate-300 mr-1.5"></i> Kết quả lượt chạy:</span>
+                <span id="lootCountBadge" class="text-[10px] font-mono bg-slate-900 text-slate-300 border border-slate-700 px-2 py-0.5 rounded">Chưa khai thác</span>
+              </div>
+              <div id="labLootBox" class="text-[11px] font-mono space-y-1.5 text-gray-400">
+                <div id="loot-sqli" class="p-2 rounded bg-gray-900 border border-gray-800 flex items-center justify-between">
+                  <span>1. SQLi DB Dump:</span>
+                  <span class="text-gray-500">Chưa trích xuất</span>
+                </div>
+                <div id="loot-xss" class="p-2 rounded bg-gray-900 border border-gray-800 flex items-center justify-between">
+                  <span>2. XSS Session Cookie:</span>
+                  <span class="text-gray-500">Chưa đánh cắp</span>
+                </div>
+                <div id="loot-ssrf" class="p-2 rounded bg-gray-900 border border-gray-800 flex items-center justify-between">
+                  <span>3. SSRF AWS IAM Key:</span>
+                  <span class="text-gray-500">Chưa đọc Metadata</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= TAB 1: SCANNER VIEW ================= -->
+    <div id="view-scanner" class="hidden space-y-6">
+      
+      <!-- Top Target Controller & Mode Switcher -->
+      <div class="bg-gray-900/90 border border-gray-800 rounded-xl p-5 shadow-xl space-y-4">
+        
+        <!-- Mode Switcher Tabs -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs uppercase font-semibold text-gray-400">Chọn Chế Độ Quét:</span>
+            <div class="inline-flex rounded-lg border border-gray-700 bg-gray-950 p-1">
+              <button onclick="setScanMode('passive')" id="mode-passive-btn" class="px-3 py-1 text-xs font-semibold rounded-md transition flex items-center space-x-1.5 bg-slate-700 text-white shadow">
+                <i class="fa-solid fa-shield-cat"></i>
+                <span>Chế Độ 1: Passive Security Audit (Quét An Toàn Mọi Web Ngoài)</span>
+              </button>
+              <button onclick="setScanMode('active')" id="mode-active-btn" class="px-3 py-1 text-xs font-semibold rounded-md transition flex items-center space-x-1.5 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-vial-virus"></i>
+                <span>Chế Độ 2: Active DAST Simulation (Mô Hình Kashef Trong Bài Báo)</span>
+              </button>
+            </div>
+          </div>
+          <span id="mode-status-badge" class="text-xs px-2.5 py-0.5 rounded-full font-mono bg-slate-900 text-slate-300 border border-slate-700">
+            Trạng thái: Mô phỏng bằng dữ liệu mẫu
+          </span>
+        </div>
+
+        <!-- Target Input Bar -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex-1 w-full">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs uppercase tracking-wider text-gray-400 font-semibold" id="targetLabel">
+                <i class="fa-solid fa-globe text-slate-300 mr-1"></i> Nhập URL làm nhãn mô phỏng (không đánh giá website)
+              </label>
+              <span id="scope-badge" class="text-[11px] text-slate-300 bg-slate-900/70 border border-slate-700/70 px-2 py-0.5 rounded">
+                <i class="fa-solid fa-check-double mr-1"></i> Passive Simulation: URL là nhãn minh họa
+              </span>
+            </div>
+            
+            <div class="relative flex items-center">
+              <span class="absolute left-3.5 text-gray-500"><i class="fa-solid fa-link"></i></span>
+              <input type="text" id="targetUrl" value="https://example.com" 
+                class="w-full bg-gray-950 border border-gray-700 rounded-lg py-2.5 pl-10 pr-56 text-sm text-slate-300 font-mono focus:outline-none focus:border-slate-700 transition">
+              
+              <!-- Quick Preset Buttons -->
+              <div class="absolute right-2 flex space-x-1" id="presetButtons">
+                <button onclick="setTarget('https://example.com')" class="text-[11px] px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-mono">Example</button>
+                <button onclick="setTarget('https://portswigger-labs.net')" class="text-[11px] px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-mono">PortSwigger</button>
+                <button onclick="setTarget('http://testphp.vulnweb.com')" class="text-[11px] px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-mono">VulnWeb</button>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-gray-500 mt-1.5" id="targetDescription">
+              <i class="fa-solid fa-circle-check text-slate-300 mr-1"></i>
+              <strong>Mô phỏng kiểm tra thụ động (dữ liệu mẫu):</strong> Phân tích HTTP Security Headers (CSP, HSTS, X-Frame-Options), cookie flags (HttpOnly/Secure) và tra cứu CVE công khai mà không can thiệp hay gửi dữ liệu độc hại đến website mục tiêu.
+            </p>
+          </div>
+
+          <div class="flex items-center space-x-3 w-full md:w-auto pt-2 md:pt-4">
+            <button id="btnStartScan" onclick="handleScanTrigger()" 
+              class="w-full md:w-auto px-6 py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg glow-green flex items-center justify-center space-x-2 transition">
+              <i class="fa-solid fa-play"></i>
+              <span id="btnScanText">CHẠY MÔ PHỎNG PASSIVE AUDIT</span>
+            </button>
+            <button onclick="resetScannerManual()" class="px-4 py-2.5 rounded-lg text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 transition" title="Đặt lại trạng thái">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-Stage Progress Indicator (Alhogail & Alkahtani, 2024 / Passive Framework) -->
+        <div class="mt-4 pt-4 border-t border-gray-800/80">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Stage 1 -->
+            <div id="card-stage1" class="border border-gray-800 bg-gray-950/60 rounded-lg p-3 transition duration-300">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-400 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center text-[10px] mr-2" id="badge-st1">1</span>
+                  <span id="title-st1">Stage 1: Recon & DNS / Tech Stack</span>
+                </span>
+                <span class="text-[11px] font-mono text-slate-300" id="timer-st1">Chờ lệnh (&lt; 40s)</span>
+              </div>
+              <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                <div id="prog-st1" class="bg-slate-700 h-full w-0 transition-all duration-300"></div>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-2 flex items-center justify-between">
+                <span id="desc-st1">Whois, DNS, Server Banner, Tech Stack</span>
+                <span id="status-st1" class="text-gray-400">Sẵn sàng</span>
+              </p>
+            </div>
+
+            <!-- Stage 2 -->
+            <div id="card-stage2" class="border border-gray-800 bg-gray-950/60 rounded-lg p-3 transition duration-300">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-400 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center text-[10px] mr-2" id="badge-st2">2</span>
+                  <span id="title-st2">Stage 2: Security Headers & Config Audit</span>
+                </span>
+                <span class="text-[11px] font-mono text-slate-300" id="timer-st2">Chờ lệnh (~30s)</span>
+              </div>
+              <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                <div id="prog-st2" class="bg-slate-700 h-full w-0 transition-all duration-300"></div>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-2 flex items-center justify-between">
+                <span id="desc-st2">CSP, HSTS, X-Frame, Cookies, TLS</span>
+                <span id="status-st2" class="text-gray-400">Sẵn sàng</span>
+              </p>
+            </div>
+
+            <!-- Stage 3 -->
+            <div id="card-stage3" class="border border-gray-800 bg-gray-950/60 rounded-lg p-3 transition duration-300">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-gray-400 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center text-[10px] mr-2" id="badge-st3">3</span>
+                  <span id="title-st3">Stage 3: CVE Lookup & Report</span>
+                </span>
+                <span class="text-[11px] font-mono text-slate-300" id="timer-st3">Bán tự động</span>
+              </div>
+              <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                <div id="prog-st3" class="bg-slate-700 h-full w-0 transition-all duration-300"></div>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-2 flex items-center justify-between">
+                <span id="desc-st3">NVD CVE Matching & Xuất Báo Cáo</span>
+                <span id="status-st3" class="text-gray-400">Sẵn sàng</span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution Grid: Left Terminal, Right Results -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Live Terminal Stream -->
+        <div class="lg:col-span-5 bg-gray-950 border border-gray-800 rounded-xl p-4 shadow-xl flex flex-col h-[520px]">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 rounded-full bg-slate-700/80"></div>
+              <div class="w-3 h-3 rounded-full bg-slate-700/80"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+              <span class="text-xs font-mono text-gray-400 ml-2" id="term-host">kashef-server:~/wvpt-engine#</span>
+            </div>
+            <span class="text-[11px] text-slate-300 font-mono bg-slate-900/80 border border-slate-700/60 px-2 py-0.5 rounded" id="term-mode-badge">
+              Passive Engine: Ready
+            </span>
+          </div>
+
+          <!-- Terminal Content -->
+          <div id="terminalLog" class="flex-1 font-mono text-xs overflow-y-auto mt-3 space-y-1.5 text-gray-300 custom-scroll pr-1">
+            <div class="text-gray-500">[System] Suite kiểm thử bảo mật Kashef khởi tạo thành công.</div>
+            <div class="text-gray-500">[Info] Chế độ mặc định: Passive Security Audit (An toàn cho mọi website ngoài).</div>
+            <div class="text-gray-500">[Rule] Tuân thủ chuẩn đạo đức kiểm thử: không can thiệp, không inject payload độc hại.</div>
+            <div class="text-slate-300">$ <span class="cursor-blink">_</span></div>
+          </div>
+
+          <div class="pt-3 border-t border-gray-900 flex justify-between items-center text-[11px] text-gray-500">
+            <span>Mô phỏng quy trình kiểm thử</span>
+            <button onclick="clearTerminal()" class="text-gray-400 hover:text-white underline">Xóa log</button>
+          </div>
+        </div>
+
+        <!-- Scan Findings & Assessment Details -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- Summary Metrics Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-3">
+              <span class="text-xs text-gray-400" id="card-total-title">Vấn Đề Phát Hiện</span>
+              <div class="text-2xl font-bold text-white mt-1" id="vuln-count">0</div>
+              <span class="text-[10px] text-gray-500" id="card-total-sub">Headers & Cookies</span>
+            </div>
+            <div class="bg-gray-900/80 border border-slate-700/60 rounded-xl p-3">
+              <span class="text-xs text-slate-300">Critical / High</span>
+              <div class="text-2xl font-bold text-slate-300 mt-1" id="crit-count">0</div>
+              <span class="text-[10px] text-slate-300/70" id="card-crit-sub">Missing CSP/HSTS</span>
+            </div>
+            <div class="bg-gray-900/80 border border-slate-700/60 rounded-xl p-3">
+              <span class="text-xs text-slate-300">Medium / Low</span>
+              <div class="text-2xl font-bold text-slate-300 mt-1" id="med-count">0</div>
+              <span class="text-[10px] text-slate-300/70" id="card-med-sub">Cookie Flag / Sniffing</span>
+            </div>
+            <div class="bg-gray-900/80 border border-slate-700/60 rounded-xl p-3">
+              <span class="text-xs text-slate-300">Điểm Bảo Mật (Score)</span>
+              <div class="text-2xl font-bold text-slate-300 mt-1" id="total-time">--</div>
+              <span class="text-[10px] text-slate-300/70" id="card-time-sub">Chưa đánh giá</span>
+            </div>
+          </div>
+
+          <!-- Findings Table Container -->
+          <div class="bg-gray-900/90 border border-gray-800 rounded-xl p-4 shadow-xl min-h-[380px] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+              <h3 class="text-sm font-semibold text-white flex items-center" id="findingsTableTitle">
+                <i class="fa-solid fa-list-check text-slate-300 mr-2"></i>
+                Danh Sách Đánh Giá Phòng Thủ & Cấu Hình An Toàn
+              </h3>
+              <div class="flex space-x-2">
+                <button onclick="exportReportModal()" id="btnExportReport" class="opacity-50 cursor-not-allowed text-xs bg-slate-700/60 text-white px-2.5 py-1 rounded border border-slate-700 transition flex items-center space-x-1" disabled>
+                  <i class="fa-solid fa-file-lines"></i>
+                  <span>Xem Báo Cáo Đánh Giá</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Finding Table Content -->
+            <div class="flex-1 overflow-y-auto custom-scroll mt-3">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-gray-800 text-gray-400 font-medium">
+                    <th class="py-2 px-3">Hạng Mục Đánh Giá</th>
+                    <th class="py-2 px-3">Mức Độ Rủi Ro</th>
+                    <th class="py-2 px-3">Trạng Thái / Chi Tiết</th>
+                    <th class="py-2 px-3">Tiêu Chuẩn</th>
+                    <th class="py-2 px-3 text-right">Chi Tiết / PoC</th>
+                  </tr>
+                </thead>
+                <tbody id="findingsTable" class="divide-y divide-gray-800/60 text-gray-300 font-mono">
+                  <tr>
+                    <td colspan="5" class="py-12 text-center text-gray-500 font-sans">
+                      <i class="fa-solid fa-shield-halved text-3xl mb-2 block text-gray-600"></i>
+                      Chưa chạy kiểm thử. Nhấn <strong>"BẮT ĐẦU QUÉT"</strong> để tiến hành đánh giá an toàn.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Exploit Upload & Zero-day Section -->
+            <div class="mt-4 pt-3 border-t border-gray-800 bg-gray-950/70 p-3 rounded-lg space-y-2">
+              <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                <div class="text-xs">
+                  <span class="font-semibold text-slate-300 flex items-center">
+                    <i class="fa-solid fa-unlock-keyhole mr-1.5"></i> Custom Exploit Uploader (Bài báo gọi là "Zero-day")
+                  </span>
+                  <p class="text-[11px] text-gray-400 mt-0.5">
+                    Khai thác bán tự động theo bài báo: Cho phép pentester tải lên custom exploit script và tự cấu hình tham số listener IP/port.
+                  </p>
+                </div>
+                <div class="flex space-x-2">
+                  <button onclick="triggerZeroDayDemo()" class="text-xs bg-slate-900/60 hover:bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition flex items-center space-x-1">
+                    <i class="fa-solid fa-bug"></i>
+                    <span>Tải Lên Exploit (.py) [Mô phỏng]</span>
+                  </button>
+                </div>
+              </div>
+
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 4: ARCHITECTURE VIEW ================= -->
+    <div id="view-architecture" class="hidden space-y-6">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+        <h2 class="text-lg font-bold text-white flex items-center mb-2">
+          <i class="fa-solid fa-network-wired text-slate-300 mr-2"></i>
+          Kiến Trúc Hệ Thống 3 Tầng (3-Tier Concept) Theo Paper
+        </h2>
+        <p class="text-xs text-gray-400 mb-6">Mô hình phân tách giữa giao diện trình duyệt, cầu nối API và máy chủ thực thi Linux (Hình 5 trong bài báo của <em>Alhogail & Alkahtani, 2024</em>).</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          
+          <!-- Presentation Tier -->
+          <div class="bg-gray-950 border border-slate-700/80 rounded-xl p-4 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-900 text-slate-300 flex items-center justify-center text-xl mb-3">
+              <i class="fa-brands fa-chrome"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-300">1. Presentation Tier</h4>
+            <p class="text-xs text-gray-400 mt-1 font-mono">Google Chrome Extension</p>
+            <p class="text-[11px] text-gray-500 mt-2 text-left">Giao diện người dùng trên trình duyệt, gửi trigger kiểm thử qua REST API và hiển thị kết quả báo cáo.</p>
+          </div>
+
+          <!-- Connector -->
+          <div class="text-center text-gray-600 hidden md:block">
+            <i class="fa-solid fa-arrow-right-arrow-left text-xl text-slate-300"></i>
+            <span class="block text-[10px] font-mono mt-1 text-gray-400">JSON / HTTP REST</span>
+          </div>
+
+          <!-- Application Tier -->
+          <div class="bg-gray-950 border border-slate-700/80 rounded-xl p-4 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-900 text-slate-300 flex items-center justify-center text-xl mb-3">
+              <i class="fa-brands fa-php"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-300">2. Application Tier</h4>
+            <p class="text-xs text-gray-400 mt-1 font-mono">PHP API Service</p>
+            <p class="text-[11px] text-gray-500 mt-2 text-left">Nhận request, validate regex tránh command injection, điều phối tác vụ và tổng hợp kết quả.</p>
+          </div>
+
+          <!-- Data / Server Tier -->
+          <div class="bg-gray-950 border border-slate-700/80 rounded-xl p-4 text-center">
+            <div class="w-12 h-12 mx-auto rounded-full bg-slate-900 text-slate-300 flex items-center justify-center text-xl mb-3">
+              <i class="fa-brands fa-ubuntu"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-300">3. Data & Exec Tier</h4>
+            <p class="text-xs text-gray-400 mt-1 font-mono">Ubuntu Linux Server</p>
+            <p class="text-[11px] text-gray-500 mt-2 text-left">Thực thi Nmap, Sublist3r, FastFuz, SearchSploit và lưu trữ exploit scripts.</p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Report Modal -->
+  <div id="reportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+      <div class="p-5 border-b border-gray-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-file-contract text-slate-300 text-lg"></i>
+          <h3 class="font-bold text-white text-base">BÁO CÁO KẾT QUẢ ĐÁNH GIÁ AN TOÀN (KASHEF REPORT)</h3>
+        </div>
+        <button onclick="closeReportModal()" class="text-gray-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 text-xs text-gray-300 custom-scroll font-sans" id="reportContent">
+        <!-- Dynamically injected report details with strict HTML escaping -->
+      </div>
+
+      <div class="p-4 border-t border-gray-800 flex justify-end space-x-3 bg-gray-950 rounded-b-2xl">
+        <button onclick="window.print()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-xs flex items-center space-x-1.5">
+          <i class="fa-solid fa-print"></i>
+          <span>In / Lưu PDF</span>
+        </button>
+        <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 bg-[#0a0e17] px-6 py-4 text-center text-xs text-gray-500">
+    Kashef · Web Security Lab
+  </footer>
+
+  <!-- Simulation Engine JS -->
+  <script src="assets/app.js"></script>
+  <script src="assets/lab.js"></script>
+</body>
+</html>
